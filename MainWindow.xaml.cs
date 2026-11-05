@@ -498,12 +498,22 @@ namespace SoborSmartReport
                 //string? pdfPath = Path.Combine(baseFolder, "02 전원품질", "K.pdf");
                 string? pdfPath = string.Empty;
 
+                string[]? ValueCells = new[]
+                            {
+                                            "D12",
+                                            "G12",
+                                            "J12"
+                                        };
+
                 // 열화상
                 if (checkBoxThermal.IsChecked == true)
                 {
                     //ProcFeverPicture(xlApp, workbooks, wb, baseFolder, tbQuaterFolder.Text.Trim());
+                    //report?.ProcFeverPicture(tbQuaterSheet.Text.Trim(), checkBoxOcr.IsChecked, xlApp, wb, workbooks, baseFolder,
+                    //    tbQuaterFolder.Text, checkBoxCopy.IsChecked);
                     report?.ProcFeverPicture(tbQuaterSheet.Text.Trim(), checkBoxOcr.IsChecked, xlApp, wb, workbooks, baseFolder,
-                        tbQuaterFolder.Text, checkBoxCopy.IsChecked);
+                        tbQuaterFolder.Text, checkBoxCopy.IsChecked,
+                        ValueCells, 14, 14, 17, "A", "H", "G", "N", "N");
                 }
 
                 // 품질

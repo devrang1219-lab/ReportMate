@@ -1206,19 +1206,22 @@ namespace SoborSmartReport
         #region [열화상 이미지 분기 시트 삽입]
         public void EnsureFeverPicturePages(
             Excel.Worksheet ws,
-            int imageCount)
+            int imageCount,
+            int pageRowOffset = 56,
+            int imageEndRow = 43,
+            string lastColumn = "AD")
         {
             if (ws == null || imageCount <= 0)
                 return;
 
-            const int PAGE_ROW_OFFSET = 56;
+            int PAGE_ROW_OFFSET = pageRowOffset;
 
             // 한 페이지의 사진 위치
             //const int IMAGE_START_ROW = 27;
-            const int IMAGE_END_ROW = 43;
+            int IMAGE_END_ROW = imageEndRow;
 
             // 보고서 마지막 열
-            const string LAST_COLUMN = "AD";
+            string LAST_COLUMN = lastColumn;
 
             Excel.Range? printAreaRange = null;
 
@@ -1380,43 +1383,96 @@ namespace SoborSmartReport
                         // 새 페이지 시작 위치에 페이지 나누기
                         //--------------------------------------------------
 
+                        //breakCell = (Excel.Range)ws.Cells[destStartRow, 1];
+
+                        //bool breakExists = false;
+
+                        //int breakCount = ws.HPageBreaks.Count;
+
+                        //for (int i = 1; i <= breakCount; i++)
+                        //{
+                        //    Excel.HPageBreak? hp = null;
+                        //    Excel.Range? location = null;
+
+                        //    try
+                        //    {
+                        //        hp = ws.HPageBreaks[i];
+
+                        //        location = hp.Location;
+
+                        //        if (location.Row == destStartRow)
+                        //        {
+                        //            breakExists = true;
+                        //            break;
+                        //        }
+                        //    }
+                        //    finally
+                        //    {
+                        //        if (location != null)
+                        //            Marshal.ReleaseComObject(location);
+
+                        //        if (hp != null)
+                        //            Marshal.ReleaseComObject(hp);
+                        //    }
+                        //}
+
+                        //if (!breakExists)
+                        //{
+                        //    ws.HPageBreaks.Add(
+                        //        Before: breakCell);
+                        //}
+
                         breakCell = (Excel.Range)ws.Cells[destStartRow, 1];
 
                         bool breakExists = false;
 
-                        int breakCount = ws.HPageBreaks.Count;
+                        Excel.HPageBreaks? hPageBreaks = null;
 
-                        for (int i = 1; i <= breakCount; i++)
+                        try
                         {
-                            Excel.HPageBreak? hp = null;
-                            Excel.Range? location = null;
+                            hPageBreaks = ws.HPageBreaks;
 
-                            try
+                            int breakCount = hPageBreaks.Count;
+
+                            for (int i = 1; i <= breakCount; i++)
                             {
-                                hp = ws.HPageBreaks[i];
+                                Excel.HPageBreak? hp = null;
+                                Excel.Range? location = null;
 
-                                location = hp.Location;
-
-                                if (location.Row == destStartRow)
+                                try
                                 {
-                                    breakExists = true;
-                                    break;
+                                    hp = hPageBreaks[i];
+                                    location = hp.Location;
+
+                                    if (location.Row == destStartRow)
+                                    {
+                                        breakExists = true;
+                                        break;
+                                    }
+                                }
+                                finally
+                                {
+                                    if (location != null)
+                                        Marshal.ReleaseComObject(location);
+
+                                    if (hp != null)
+                                        Marshal.ReleaseComObject(hp);
                                 }
                             }
-                            finally
-                            {
-                                if (location != null)
-                                    Marshal.ReleaseComObject(location);
 
-                                if (hp != null)
-                                    Marshal.ReleaseComObject(hp);
+                            // 없으면 추가
+                            if (!breakExists)
+                            {
+                                hPageBreaks.Add(breakCell);
                             }
                         }
-
-                        if (!breakExists)
+                        finally
                         {
-                            ws.HPageBreaks.Add(
-                                Before: breakCell);
+                            if (hPageBreaks != null)
+                                Marshal.ReleaseComObject(hPageBreaks);
+
+                            if (breakCell != null)
+                                Marshal.ReleaseComObject(breakCell);
                         }
 
 
@@ -1471,7 +1527,16 @@ namespace SoborSmartReport
             Excel.Workbooks wss,
             string? baseFolder,
             string? pictureFolder,
-            bool? bCreateNewWs = false)
+            bool? bCreateNewWs = false,
+            string[]? valuesCells = null,
+            int rowOffset = 27,
+            int endOffet = 43,
+            int rowPerPage = 56,
+            string firstStartCol = "A",
+            string secondStartCol = "R",
+            string firstEndCol = "Q",
+            string secondEndCol = "AC",
+            string lastColumn = "AD")
         {
             // 새 통합문서 생성
             Excel.Workbook? newWb = null;
@@ -1539,21 +1604,21 @@ namespace SoborSmartReport
                 .ToArray();
 
                 // ★ 필요한 페이지가 부족하면 마지막 페이지 복사
-                //EnsureFeverPicturePages(sourceWs, files.Length);
-                //if (ws != null)
-                //{
-                //    EnsureFeverPicturePages(ws, files.Length);
-                //}
+                EnsureFeverPicturePages(sourceWs, files.Length, rowPerPage, endOffet, lastColumn);
+                if (ws != null)
+                {
+                    EnsureFeverPicturePages(ws, files.Length, rowPerPage, endOffet, lastColumn);
+                }
 
                 int imageIndex = 0;
 
                 for (int page = 0; imageIndex < files.Length; page++)
                 {
-                    int startRow = 27 + (page * 56);
-                    int endRow = 43 + (page * 56);
+                    int startRow = rowOffset + (page * rowPerPage);
+                    int endRow = endOffet + (page * rowPerPage);
 
-                    string[] fromCols = { "A", "R" };
-                    string[] toCols = { "Q", "AC" };   // 실제 병합 끝 열에 맞게 수정
+                    string[] fromCols = { firstStartCol, secondStartCol };
+                    string[] toCols = { firstEndCol, secondEndCol };   // 실제 병합 끝 열에 맞게 수정
 
                     for (int i = 0; i < fromCols.Length; i++)
                     {
@@ -1617,7 +1682,7 @@ namespace SoborSmartReport
                     {
                         OcrExcelMap map = new OcrExcelMap
                         {
-                            ValueCells = new[]
+                            ValueCells = valuesCells ?? new[]
                             {
                                             "H49",
                                             "P49",
